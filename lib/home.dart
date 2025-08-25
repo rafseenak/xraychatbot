@@ -12,6 +12,7 @@ import 'package:xraychatboat/services/constants.dart';
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
   final String title;
+
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
@@ -32,119 +33,79 @@ class _MyHomePageState extends State<MyHomePage> {
     super.dispose();
   }
 
+  /// Pick image from gallery
   Future<void> _pickImage() async {
     final XFile? pickedFile =
         await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       final croppedFile = await _cropImage(pickedFile.path);
-      if(croppedFile != null){
-        Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ImageDisplayPage(
-            imageFile: File(croppedFile.path),
-            onSend: (imagePath) async {
-              context.read<XrayBloc>().add(SendRequestEvent(
-                  imagePath: imagePath, pickedFile: XFile(croppedFile.path)));
-            },
-          ),
-        ),
-      );
+      if (croppedFile != null) {
+        _navigateToImageDisplay(croppedFile);
       }
     }
   }
 
+  /// Pick image from camera
   Future<void> _openCamera() async {
     final XFile? pickedFile =
         await _picker.pickImage(source: ImageSource.camera);
     if (pickedFile != null) {
       final croppedFile = await _cropImage(pickedFile.path);
-      if(croppedFile != null){
-        Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ImageDisplayPage(
-            imageFile: File(croppedFile.path),
-            onSend: (imagePath) async {
-              context.read<XrayBloc>().add(SendRequestEvent(
-                  imagePath: imagePath, pickedFile: XFile(croppedFile.path)));
-            },
-          ),
-        ),
-      );
+      if (croppedFile != null) {
+        _navigateToImageDisplay(croppedFile);
       }
     }
   }
 
+  /// Navigate to preview page
+  void _navigateToImageDisplay(File croppedFile) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ImageDisplayPage(
+          imageFile: croppedFile,
+          onSend: (imagePath) async {
+            context.read<XrayBloc>().add(
+                  SendRequestEvent(
+                    imagePath: imagePath,
+                    pickedFile: XFile(croppedFile.path),
+                  ),
+                );
+          },
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Center(
-            child: Text(
-          'XRAYCAD',
-          style: GoogleFonts.poppins(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
+          child: Text(
+            'XRAYCAD',
+            style: GoogleFonts.poppins(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
           ),
-        )),
+        ),
         actions: [
           BlocBuilder<AuthBloc, AuthState>(
             builder: (context, state) {
               return IconButton(
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                          title: Text('Log Out'),
-                          content: Text('Do you want to logout?'),
-                          actions: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                TextButton(
-                                  child: Text(
-                                    "Cancel",
-                                    style: TextStyle(
-                                      color: Color.fromARGB(255, 224, 23, 23)
-                                    ),
-                                  ),
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                  },
-                                ),
-                                TextButton(
-                                  child: Text(
-                                    "OK",
-                                    style: TextStyle(
-                                      color: Color.fromARGB(255, 67, 196, 235)
-                                    ),
-                                  ),
-                                  onPressed: () {
-                                    context.read<AuthBloc>().add(LogoutEvent());
-                                    Navigator.of(context).pop();
-                                  },
-                                ),
-                              ],
-                            )
-                          ],
-                        );
-                      },
-                    );
-                  },
-                  icon: Icon(Icons.logout));
+                onPressed: () => _showLogoutDialog(),
+                icon: const Icon(Icons.logout),
+              );
             },
-          )
+          ),
         ],
       ),
       body: BlocListener<XrayBloc, XrayState>(
-        listener: (context, state1) {
-          if (state1 is XrayRequestError) {
-            final errorMessage = state1.message;
-            showWarningDialog(context, errorMessage);
+        listener: (context, state) {
+          if (state is XrayRequestError) {
+            showWarningDialog(context, state.message);
           }
         },
         child: BlocBuilder<XrayBloc, XrayState>(
@@ -155,17 +116,18 @@ class _MyHomePageState extends State<MyHomePage> {
               if (_scrollController.hasClients) {
                 _scrollController.animateTo(
                   _scrollController.position.maxScrollExtent,
-                  duration: Duration(milliseconds: 300),
+                  duration: const Duration(milliseconds: 300),
                   curve: Curves.easeOut,
                 );
               }
             });
-            if(state is XrayLoading){
-              return Center(child: CircularProgressIndicator());
+
+            if (state is XrayLoading) {
+              return const Center(child: CircularProgressIndicator());
             }
 
             return Center(
-              child: (chats.isEmpty)
+              child: chats.isEmpty
                   ? Padding(
                       padding: const EdgeInsets.all(30.0),
                       child: Text(
@@ -176,7 +138,8 @@ class _MyHomePageState extends State<MyHomePage> {
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
                         ),
-                      ))
+                      ),
+                    )
                   : ListView.builder(
                       controller: _scrollController,
                       shrinkWrap: true,
@@ -186,137 +149,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           return const SizedBox(height: 80);
                         }
                         final chat = chats[index];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 8.0, horizontal: 16.0),
-                          child: Row(
-                            mainAxisAlignment: chat['sender'] != 'ai'
-                                ? MainAxisAlignment.end
-                                : MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Flexible(
-                                child: Container(
-                                  padding: const EdgeInsets.all(5.0),
-                                  margin: EdgeInsets.only(
-                                      left: chat['sender'] != 'ai' ? 50 : 0,
-                                      right: chat['sender'] != 'ai' ? 0 : 50),
-                                  decoration: BoxDecoration(
-                                    color: chat['sender'] != 'ai'
-                                        ? Colors.blue[100]
-                                        : Colors.grey[200],
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      (chat['image'] != null)
-                                      ? ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                          child: Image.network(
-                                              '${Constants.server}/static/${chat['image']}',
-                                              width: 200))
-                                      : SizedBox(),
-                                      chat['text'].isEmpty
-                                      ? SizedBox()
-                                      : Padding(
-                                          padding: const EdgeInsets.all(4),
-                                          child: Text(
-                                            chat['text'],
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.normal,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                        ),
-                                        
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              if(chat['sender'] == 'ai')...[
-                                ElevatedButton(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) {
-                                        return Dialog(
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          child: Container(
-                                            padding: const EdgeInsets.all(10),
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Text(
-                                                  "Zone Wise Detection",
-                                                  style: GoogleFonts.poppins(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 10),
-                                                ClipRRect(
-                                                  borderRadius: BorderRadius.circular(10),
-                                                  child: Image.network(
-                                                    '${Constants.server}/static/${chat['zone']}',
-                                                    width: 300,
-                                                    fit: BoxFit.cover,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 15),
-                                                ElevatedButton(
-                                                  onPressed: () {
-                                                    Navigator.pop(context);
-                                                  },
-                                                  child: Text(
-                                                    "Close",
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 12,
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    );
-                                  },
-                                  child: Text(
-                                    'Zone Wise\nDetection',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.blue,
-                                    ),
-                                    textAlign: TextAlign.end,
-                                  ),
-                                )
-
-                                // ElevatedButton(
-                                //   onPressed: (){
-                                //     Navigator.of(context).push(MaterialPageRoute(builder: (context)=>ZoneWiseResultPage()));
-                                //   },
-                                //   child: Text(
-                                //     'Zone Wise\nDetection',
-                                //     style: GoogleFonts.poppins(
-                                //       fontSize: 10,
-                                //       fontWeight: FontWeight.bold,
-                                //       color: Colors.blue,
-                                //     ),
-                                //     textAlign: TextAlign.end,
-                                //   )
-                                // )
-                              ]
-                            ],
-                          ),
-                        );
+                        return _buildChatBubble(chat);
                       },
                     ),
             );
@@ -326,19 +159,18 @@ class _MyHomePageState extends State<MyHomePage> {
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           FloatingActionButton(
-            heroTag: 'gallary',
+            heroTag: 'gallery',
             foregroundColor: Colors.black,
             backgroundColor: Colors.white,
             onPressed: _pickImage,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(30.0),
             ),
-            child: Icon(Icons.add, size: 35),
+            child: const Icon(Icons.add, size: 35),
           ),
-          SizedBox(width: 20),
+          const SizedBox(width: 20),
           FloatingActionButton(
             heroTag: 'camera',
             foregroundColor: Colors.black,
@@ -347,13 +179,167 @@ class _MyHomePageState extends State<MyHomePage> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(30.0),
             ),
-            child: Icon(Icons.camera, size: 35),
+            child: const Icon(Icons.camera, size: 35),
           ),
         ],
       ),
     );
   }
 
+  /// Build chat bubble UI
+  Widget _buildChatBubble(Map<String, dynamic> chat) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+      child: Row(
+        mainAxisAlignment: chat['sender'] != 'ai'
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.all(5.0),
+              margin: EdgeInsets.only(
+                left: chat['sender'] != 'ai' ? 50 : 0,
+                right: chat['sender'] != 'ai' ? 0 : 50,
+              ),
+              decoration: BoxDecoration(
+                color: chat['sender'] != 'ai'
+                    ? Colors.blue[100]
+                    : Colors.grey[200],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (chat['image'] != null)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.network(
+                        '${Constants.server}/static/${chat['image']}',
+                        width: 200,
+                      ),
+                    ),
+                  if (chat['text'].isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Text(
+                        chat['text'],
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.normal,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          if (chat['sender'] == 'ai') ...[
+            ElevatedButton(
+              onPressed: () => _showZoneWiseDialog(chat),
+              child: Text(
+                'Zone Wise\nDetection',
+                style: GoogleFonts.poppins(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
+                ),
+                textAlign: TextAlign.end,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Show logout dialog
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16), // Rounded corners
+        ),
+        title: const Text(
+          'Log Out',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text('Are you sure you want to log out?'),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              "Cancel",
+              style: TextStyle(color: Colors.grey),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              context.read<AuthBloc>().add(LogoutEvent());
+              Navigator.of(context).pop();
+            },
+            child: const Text(
+              "Logout",
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Show zone wise detection dialog
+  void _showZoneWiseDialog(Map<String, dynamic> chat) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Zone Wise Detection",
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(
+                  '${Constants.server}/static/${chat['zone']}',
+                  width: 300,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(height: 15),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  "Close",
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Crop image utility
   Future<File?> _cropImage(String path) async {
     final cropped = await ImageCropper().cropImage(
       sourcePath: path,
@@ -382,14 +368,15 @@ class _MyHomePageState extends State<MyHomePage> {
     return cropped != null ? File(cropped.path) : null;
   }
 
+  /// Show error warning dialog
   void showWarningDialog(BuildContext context, String message) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.error, color: Colors.red),
-            SizedBox(width: 8),
+            const Icon(Icons.error, color: Colors.red),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 message,
@@ -406,7 +393,7 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         actions: [
           TextButton(
-            child: Text('Back'),
+            child: const Text('Back'),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
@@ -415,12 +402,16 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 }
 
+/// Preview page for selected image
 class ImageDisplayPage extends StatelessWidget {
   final File imageFile;
   final Function(String) onSend;
 
-  const ImageDisplayPage(
-      {super.key, required this.imageFile, required this.onSend});
+  const ImageDisplayPage({
+    super.key,
+    required this.imageFile,
+    required this.onSend,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -431,9 +422,7 @@ class ImageDisplayPage extends StatelessWidget {
         foregroundColor: Colors.white,
       ),
       backgroundColor: Colors.black,
-      body: Center(
-        child: Image.file(imageFile),
-      ),
+      body: Center(child: Image.file(imageFile)),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           onSend(imageFile.path);
@@ -444,12 +433,13 @@ class ImageDisplayPage extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(30.0),
         ),
-        child: Icon(Icons.send),
+        child: const Icon(Icons.send),
       ),
     );
   }
 }
 
+/// Custom crop ratio
 class CropAspectRatioPresetCustom implements CropAspectRatioPresetData {
   @override
   (int, int)? get data => (2, 3);

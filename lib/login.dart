@@ -14,167 +14,236 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool _obscurePassword = true;
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         return Scaffold(
-            body: Stack(
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage("assets/background.png"),
-                  fit: BoxFit.cover,
+          body: Stack(
+            children: [
+              // Background image with dark overlay
+              Container(
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage("assets/background.png"),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                child: Container(
+                  color: Colors.black.withOpacity(0.4), // overlay
                 ),
               ),
-            ),
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Material(
-                  color: Colors.white,
-                  child: SingleChildScrollView(
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(30.0),
-                            child: Image(image: AssetImage("assets/home.png")),
-                          ),
-                          SizedBox(height: 80),
-                          Text(
-                            "LOGIN",
-                            style: GoogleFonts.poppins(
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                          SizedBox(height: 20),
-                          _textField('Enter Username', usernameController, false),
-                          _textField('Enter Password', passwordController, false),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                            child: Align(
-                              alignment: Alignment.centerRight,
-                              child: GestureDetector(
-                                onTap: () {},
-                                child: Text(
-                                  "Recover Password",
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.normal,
-                                    color: Color.fromARGB(255, 67, 196, 235),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: 25),
-                          ElevatedButton(
-                            onPressed: () async {
-                              if(_formKey.currentState!.validate()){
-                                context.read<AuthBloc>().add(LoginSubmitEvent(password: passwordController.text, userName: usernameController.text));
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color.fromARGB(255, 67, 196, 235),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
-                            ),
-                            child: (state is LoginLoading) ?
-                              SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              ):
+
+              Center(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Material(
+                      elevation: 8,
+                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.white,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 32),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Logo
+                              Image.asset("assets/home.png", height: 90),
+
+                              const SizedBox(height: 30),
+
                               Text(
-                                "Login",
+                                "Welcome Back 👋",
                                 style: GoogleFonts.poppins(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.normal,
-                                    color: Colors.white),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20.0, vertical: 5),
-                            child: Align(
-                              alignment: Alignment.center,
-                              child: TextButton(
-                                onPressed: () {
-                                  context.read<AuthBloc>().add(SignupEvent());
-                                },
-                                style: TextButton.styleFrom(
-                                  foregroundColor:
-                                      Color.fromARGB(255, 67, 196, 235),
-                                  textStyle: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.normal,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "Login to continue",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+
+                              const SizedBox(height: 32),
+
+                              // Username
+                              _textField(
+                                "Username",
+                                usernameController,
+                                false,
+                                Icons.person,
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // Password with visibility toggle
+                              _textField(
+                                "Password",
+                                passwordController,
+                                _obscurePassword,
+                                Icons.lock,
+                                suffix: IconButton(
+                                  icon: Icon(
+                                    _obscurePassword
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                    color: Colors.grey,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _obscurePassword = !_obscurePassword;
+                                    });
+                                  },
+                                ),
+                              ),
+
+                              const SizedBox(height: 12),
+
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: () {},
+                                  child: Text(
+                                    "Forgot Password?",
+                                    style: TextStyle(
+                                      color: const Color(0xFF43C4EB),
+                                      fontSize: 14,
+                                    ),
                                   ),
                                 ),
-                                child: Text("Don't have an account? Sign up"),
                               ),
-                            ),
+
+                              const SizedBox(height: 24),
+
+                              // Login button
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    if (_formKey.currentState!.validate()) {
+                                      context.read<AuthBloc>().add(
+                                            LoginSubmitEvent(
+                                              userName: usernameController.text,
+                                              password: passwordController.text,
+                                            ),
+                                          );
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF43C4EB),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 16),
+                                  ),
+                                  child: (state is LoginLoading)
+                                      ? const SizedBox(
+                                          height: 22,
+                                          width: 22,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : Text(
+                                          "Login",
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    "Don’t have an account?",
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      context
+                                          .read<AuthBloc>()
+                                          .add(SignupEvent());
+                                    },
+                                    child: const Text(
+                                      "Sign Up",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF43C4EB),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                          SizedBox(height: 40),
-                        ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ));
+            ],
+          ),
+        );
       },
     );
   }
 
   Widget _textField(
-      String? hintText, TextEditingController controller, bool obscureText) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 5.0),
-      child: Material(
-        borderRadius: BorderRadius.circular(8),
-        child: TextFormField(
-          controller: controller,
-          obscureText: obscureText,
-          textInputAction: TextInputAction.next,
-          decoration: InputDecoration(
-            hintText: hintText,
-            hintStyle: GoogleFonts.poppins(
-                fontSize: 14, color: const Color.fromARGB(255, 107, 107, 107)),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                  color: Color.fromARGB(255, 67, 196, 235), width: 2),
-            ),
-            filled: true,
-            fillColor: const Color.fromARGB(255, 255, 255, 255),
-          ),
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'This field is required';
-            }
-            return null;
-          },
+    String hintText,
+    TextEditingController controller,
+    bool obscureText,
+    IconData icon, {
+    Widget? suffix,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      decoration: InputDecoration(
+        prefixIcon: Icon(icon, color: Colors.grey[600]),
+        suffixIcon: suffix,
+        hintText: hintText,
+        hintStyle: GoogleFonts.poppins(
+          fontSize: 14,
+          color: Colors.grey[500],
+        ),
+        filled: true,
+        fillColor: Colors.grey[100],
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
       ),
+      validator: (value) {
+        if (value == null || value.trim().isEmpty) {
+          return "This field is required";
+        }
+        return null;
+      },
     );
   }
 }
